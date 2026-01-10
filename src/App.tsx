@@ -19,6 +19,7 @@ import Teams from "@/pages/Teams";
 import AuditLogs from "@/pages/AuditLogs";
 import Settings from "@/pages/Settings";
 import Profile from "@/pages/Profile";
+import Permissions from "@/pages/Permissions";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/organizations" element={<Organizations />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />
+              <Route path="/permissions" element={<Permissions />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/deals" element={<Deals />} />

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { permissions as mockPermissions } from '@/data/mockData';
 import { Permission } from '@/types';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -117,7 +116,7 @@ export default function Permissions() {
     setPermissions(prev => prev.filter(p => p.id !== permissionId));
   };
 
-  const actionColors: Record<Permission['action'], string> = {
+  const actionVariants: Record<Permission['action'], 'info' | 'success' | 'warning' | 'destructive'> = {
     read: 'info',
     create: 'success',
     update: 'warning',
@@ -149,7 +148,7 @@ export default function Permissions() {
       key: 'action',
       label: 'Action',
       render: (perm) => (
-        <StatusBadge status={actionColors[perm.action] as any} size="sm">
+        <StatusBadge variant={actionVariants[perm.action]}>
           {perm.action.toUpperCase()}
         </StatusBadge>
       ),
@@ -165,10 +164,9 @@ export default function Permissions() {
       key: 'is_system',
       label: 'Type',
       render: (perm) => (
-        <StatusBadge 
-          status={perm.is_system ? 'system' : 'custom'} 
-          size="sm"
-        />
+        <StatusBadge variant={perm.is_system ? 'info' : 'default'}>
+          {perm.is_system ? 'System' : 'Custom'}
+        </StatusBadge>
       ),
     },
     {
