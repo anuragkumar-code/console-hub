@@ -106,19 +106,35 @@ export interface Message {
   isInternalNote?: boolean;
 }
 
+// New RBAC structure based on DB schema
 export interface Permission {
+  id: string;
+  name: string;
+  slug: string;
+  resource: string;
+  action: 'read' | 'create' | 'update' | 'delete';
+  description: string;
   module: string;
-  read: boolean;
-  create: boolean;
-  update: boolean;
-  delete: boolean;
+  is_system: boolean;
 }
 
 export interface Role {
   id: string;
   name: string;
+  slug: string;
   description: string;
-  permissions: Permission[];
+  is_system: boolean;
+  organization_id: string | null; // null for system roles
+  permissions?: string[]; // array of permission slugs
+}
+
+// Legacy permission structure for display (keeping for backward compatibility)
+export interface ModulePermission {
+  module: string;
+  read: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
 }
 
 export interface AuditLog {
