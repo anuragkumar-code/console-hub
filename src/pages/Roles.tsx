@@ -19,8 +19,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Shield, ChevronDown, ChevronUp, Pencil, Trash2, Lock, Plus, Search } from 'lucide-react';
-import { StatusBadge } from '@/components/ui/status-badge';
+import { Shield, ChevronDown, ChevronUp, Pencil, Trash2, Lock, Search } from 'lucide-react';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
 
 export default function Roles() {
   const [isLoading, setIsLoading] = useState(true);
@@ -195,7 +195,7 @@ export default function Roles() {
                         <div className="flex items-center gap-2">
                           <CardTitle className="text-base">{role.name}</CardTitle>
                           {role.is_system && (
-                            <StatusBadge status="system" size="sm" />
+                            <StatusBadge variant="info">System</StatusBadge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">{role.description}</p>
