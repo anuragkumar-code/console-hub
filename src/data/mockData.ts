@@ -1,6 +1,6 @@
 import type { 
   User, Organization, Contact, Account, Channel, Team, 
-  Ticket, Deal, Conversation, Message, Role, AuditLog 
+  Ticket, Deal, Conversation, Message, Role, AuditLog, Permission 
 } from '@/types';
 
 export const currentUser: User = {
@@ -91,34 +91,112 @@ export const messages: Message[] = [
   { id: 'm-7', content: 'Can you send me the proposal?', sender: 'customer', senderName: 'Michael Chen', timestamp: '2024-06-10T09:45:00' },
 ];
 
+// Permissions based on new DB schema
+export const permissions: Permission[] = [
+  // Contacts module
+  { id: 'p-1', name: 'View Contacts', slug: 'contacts.read', resource: 'contacts', action: 'read', description: 'View all contacts in the organization', module: 'CRM', is_system: true },
+  { id: 'p-2', name: 'Create Contacts', slug: 'contacts.create', resource: 'contacts', action: 'create', description: 'Create new contacts', module: 'CRM', is_system: true },
+  { id: 'p-3', name: 'Update Contacts', slug: 'contacts.update', resource: 'contacts', action: 'update', description: 'Edit existing contacts', module: 'CRM', is_system: true },
+  { id: 'p-4', name: 'Delete Contacts', slug: 'contacts.delete', resource: 'contacts', action: 'delete', description: 'Delete contacts from the system', module: 'CRM', is_system: true },
+  
+  // Accounts module
+  { id: 'p-5', name: 'View Accounts', slug: 'accounts.read', resource: 'accounts', action: 'read', description: 'View all accounts', module: 'CRM', is_system: true },
+  { id: 'p-6', name: 'Create Accounts', slug: 'accounts.create', resource: 'accounts', action: 'create', description: 'Create new accounts', module: 'CRM', is_system: true },
+  { id: 'p-7', name: 'Update Accounts', slug: 'accounts.update', resource: 'accounts', action: 'update', description: 'Edit existing accounts', module: 'CRM', is_system: true },
+  { id: 'p-8', name: 'Delete Accounts', slug: 'accounts.delete', resource: 'accounts', action: 'delete', description: 'Delete accounts', module: 'CRM', is_system: true },
+  
+  // Deals module
+  { id: 'p-9', name: 'View Deals', slug: 'deals.read', resource: 'deals', action: 'read', description: 'View all deals in the pipeline', module: 'Sales', is_system: true },
+  { id: 'p-10', name: 'Create Deals', slug: 'deals.create', resource: 'deals', action: 'create', description: 'Create new deals', module: 'Sales', is_system: true },
+  { id: 'p-11', name: 'Update Deals', slug: 'deals.update', resource: 'deals', action: 'update', description: 'Update deal information', module: 'Sales', is_system: true },
+  { id: 'p-12', name: 'Delete Deals', slug: 'deals.delete', resource: 'deals', action: 'delete', description: 'Delete deals', module: 'Sales', is_system: true },
+  
+  // Tickets module
+  { id: 'p-13', name: 'View Tickets', slug: 'tickets.read', resource: 'tickets', action: 'read', description: 'View support tickets', module: 'Support', is_system: true },
+  { id: 'p-14', name: 'Create Tickets', slug: 'tickets.create', resource: 'tickets', action: 'create', description: 'Create new tickets', module: 'Support', is_system: true },
+  { id: 'p-15', name: 'Update Tickets', slug: 'tickets.update', resource: 'tickets', action: 'update', description: 'Update ticket status and details', module: 'Support', is_system: true },
+  { id: 'p-16', name: 'Delete Tickets', slug: 'tickets.delete', resource: 'tickets', action: 'delete', description: 'Delete tickets', module: 'Support', is_system: true },
+  
+  // Channels module
+  { id: 'p-17', name: 'View Channels', slug: 'channels.read', resource: 'channels', action: 'read', description: 'View communication channels', module: 'Communication', is_system: true },
+  { id: 'p-18', name: 'Create Channels', slug: 'channels.create', resource: 'channels', action: 'create', description: 'Add new channels', module: 'Communication', is_system: true },
+  { id: 'p-19', name: 'Update Channels', slug: 'channels.update', resource: 'channels', action: 'update', description: 'Configure channels', module: 'Communication', is_system: true },
+  { id: 'p-20', name: 'Delete Channels', slug: 'channels.delete', resource: 'channels', action: 'delete', description: 'Remove channels', module: 'Communication', is_system: true },
+  
+  // Teams module
+  { id: 'p-21', name: 'View Teams', slug: 'teams.read', resource: 'teams', action: 'read', description: 'View teams', module: 'Admin', is_system: true },
+  { id: 'p-22', name: 'Create Teams', slug: 'teams.create', resource: 'teams', action: 'create', description: 'Create new teams', module: 'Admin', is_system: true },
+  { id: 'p-23', name: 'Update Teams', slug: 'teams.update', resource: 'teams', action: 'update', description: 'Edit team details', module: 'Admin', is_system: true },
+  { id: 'p-24', name: 'Delete Teams', slug: 'teams.delete', resource: 'teams', action: 'delete', description: 'Delete teams', module: 'Admin', is_system: true },
+  
+  // Users module
+  { id: 'p-25', name: 'View Users', slug: 'users.read', resource: 'users', action: 'read', description: 'View user list', module: 'Admin', is_system: true },
+  { id: 'p-26', name: 'Create Users', slug: 'users.create', resource: 'users', action: 'create', description: 'Invite new users', module: 'Admin', is_system: true },
+  { id: 'p-27', name: 'Update Users', slug: 'users.update', resource: 'users', action: 'update', description: 'Update user details', module: 'Admin', is_system: true },
+  { id: 'p-28', name: 'Delete Users', slug: 'users.delete', resource: 'users', action: 'delete', description: 'Remove users', module: 'Admin', is_system: true },
+  
+  // Roles module
+  { id: 'p-29', name: 'View Roles', slug: 'roles.read', resource: 'roles', action: 'read', description: 'View roles and permissions', module: 'Admin', is_system: true },
+  { id: 'p-30', name: 'Create Roles', slug: 'roles.create', resource: 'roles', action: 'create', description: 'Create new roles', module: 'Admin', is_system: true },
+  { id: 'p-31', name: 'Update Roles', slug: 'roles.update', resource: 'roles', action: 'update', description: 'Modify role permissions', module: 'Admin', is_system: true },
+  { id: 'p-32', name: 'Delete Roles', slug: 'roles.delete', resource: 'roles', action: 'delete', description: 'Delete roles', module: 'Admin', is_system: true },
+  
+  // Organizations module
+  { id: 'p-33', name: 'View Organizations', slug: 'organizations.read', resource: 'organizations', action: 'read', description: 'View organizations', module: 'Platform', is_system: true },
+  { id: 'p-34', name: 'Create Organizations', slug: 'organizations.create', resource: 'organizations', action: 'create', description: 'Create new organizations', module: 'Platform', is_system: true },
+  { id: 'p-35', name: 'Update Organizations', slug: 'organizations.update', resource: 'organizations', action: 'update', description: 'Edit organization settings', module: 'Platform', is_system: true },
+  { id: 'p-36', name: 'Delete Organizations', slug: 'organizations.delete', resource: 'organizations', action: 'delete', description: 'Delete organizations', module: 'Platform', is_system: true },
+  
+  // Audit Logs
+  { id: 'p-37', name: 'View Audit Logs', slug: 'audit_logs.read', resource: 'audit_logs', action: 'read', description: 'View system audit logs', module: 'Platform', is_system: true },
+];
+
+// Roles based on new DB schema
 export const roles: Role[] = [
   {
     id: 'r-1',
-    name: 'Administrator',
-    description: 'Full access to all organization features',
-    permissions: [
-      { module: 'Contacts', read: true, create: true, update: true, delete: true },
-      { module: 'Accounts', read: true, create: true, update: true, delete: true },
-      { module: 'Deals', read: true, create: true, update: true, delete: true },
-      { module: 'Tickets', read: true, create: true, update: true, delete: true },
-      { module: 'Channels', read: true, create: true, update: true, delete: true },
-      { module: 'Teams', read: true, create: true, update: true, delete: true },
-      { module: 'Settings', read: true, create: true, update: true, delete: true },
-    ]
+    name: 'Super Administrator',
+    slug: 'super_admin',
+    description: 'Full platform access with all permissions',
+    is_system: true,
+    organization_id: null,
+    permissions: permissions.map(p => p.slug),
   },
   {
     id: 'r-2',
-    name: 'Agent',
-    description: 'Access to assigned contacts, tickets, and inbox',
-    permissions: [
-      { module: 'Contacts', read: true, create: true, update: true, delete: false },
-      { module: 'Accounts', read: true, create: false, update: false, delete: false },
-      { module: 'Deals', read: true, create: true, update: true, delete: false },
-      { module: 'Tickets', read: true, create: true, update: true, delete: false },
-      { module: 'Channels', read: true, create: false, update: false, delete: false },
-      { module: 'Teams', read: true, create: false, update: false, delete: false },
-      { module: 'Settings', read: false, create: false, update: false, delete: false },
-    ]
+    name: 'Organization Administrator',
+    slug: 'org_admin',
+    description: 'Full access to organization features excluding platform settings',
+    is_system: true,
+    organization_id: null,
+    permissions: permissions.filter(p => !['Platform'].includes(p.module)).map(p => p.slug),
+  },
+  {
+    id: 'r-3',
+    name: 'Sales Manager',
+    slug: 'sales_manager',
+    description: 'Manage sales pipeline, deals, and accounts',
+    is_system: false,
+    organization_id: 'org-1',
+    permissions: ['contacts.read', 'contacts.create', 'contacts.update', 'accounts.read', 'accounts.create', 'accounts.update', 'deals.read', 'deals.create', 'deals.update', 'deals.delete'],
+  },
+  {
+    id: 'r-4',
+    name: 'Support Agent',
+    slug: 'support_agent',
+    description: 'Handle support tickets and customer communication',
+    is_system: false,
+    organization_id: 'org-1',
+    permissions: ['contacts.read', 'tickets.read', 'tickets.create', 'tickets.update', 'channels.read'],
+  },
+  {
+    id: 'r-5',
+    name: 'Viewer',
+    slug: 'viewer',
+    description: 'Read-only access to most resources',
+    is_system: false,
+    organization_id: 'org-1',
+    permissions: ['contacts.read', 'accounts.read', 'deals.read', 'tickets.read', 'channels.read', 'teams.read'],
   },
 ];
 
