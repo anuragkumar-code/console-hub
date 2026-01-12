@@ -4,12 +4,14 @@ import { CardGrid } from '@/components/ui/card-grid';
 import { DataCard } from '@/components/ui/data-card';
 import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
 import { organizations } from '@/data/mockData';
-import { Building2, Users } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { CreateOrganizationForm } from '@/components/forms/CreateOrganizationForm';
 
 export default function Organizations() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const filteredOrgs = organizations.filter(org =>
     org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -32,7 +34,7 @@ export default function Organizations() {
         description="Manage all organizations on the platform"
         action={{
           label: 'Add Organization',
-          onClick: () => console.log('Add org'),
+          onClick: () => setIsCreateOpen(true),
         }}
       >
         <div className="relative">
@@ -85,6 +87,11 @@ export default function Organizations() {
           </div>
         )}
       </div>
+
+      <CreateOrganizationForm 
+        open={isCreateOpen} 
+        onOpenChange={setIsCreateOpen} 
+      />
     </div>
   );
 }
