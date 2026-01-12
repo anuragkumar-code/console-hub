@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building2, ChevronDown, User, LogOut, Settings, Menu } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export function AppHeader() {
   const { user, setUserRole } = useAuth();
@@ -51,8 +52,11 @@ export function AppHeader() {
         )}
       </div>
 
-      {/* Right: Role switcher (demo) + User menu */}
+      {/* Right: Theme toggle + Role switcher (demo) + User menu */}
       <div className="flex items-center gap-2 md:gap-4">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+        
         {/* Role Switcher for Demo */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1 rounded-md border border-border px-2 md:px-3 py-1.5 text-xs md:text-sm hover:bg-secondary transition-colors">
