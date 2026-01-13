@@ -1,15 +1,16 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { CardGrid } from '@/components/ui/card-grid';
 import { DataCard } from '@/components/ui/data-card';
 import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
 import { organizations } from '@/data/mockData';
-import { Building2 } from 'lucide-react';
+import { Building2, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
 import { CreateOrganizationForm } from '@/components/forms/CreateOrganizationForm';
 
 export default function Organizations() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -70,9 +71,9 @@ export default function Organizations() {
                 { label: 'Users', value: org.userCount },
                 { label: 'Created', value: new Date(org.createdAt).toLocaleDateString() },
               ]}
-              onClick={() => console.log('View org', org.id)}
+              onClick={() => navigate(`/organizations/${org.id}`)}
               actions={[
-                { label: 'View Details', onClick: () => console.log('View', org.id) },
+                { label: 'View Details', onClick: () => navigate(`/organizations/${org.id}`) },
                 { label: 'Edit', onClick: () => console.log('Edit', org.id) },
                 { label: 'Suspend', onClick: () => console.log('Suspend', org.id), destructive: true },
               ]}
