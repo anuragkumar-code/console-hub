@@ -11,6 +11,7 @@ import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
 import Dashboard from "@/pages/Dashboard";
 import Organizations from "@/pages/Organizations";
+import OrganizationDetails from "@/pages/OrganizationDetails";
 import Users from "@/pages/Users";
 import Roles from "@/pages/Roles";
 import Contacts from "@/pages/Contacts";
@@ -47,7 +48,8 @@ const App = () => (
               <AppLayout>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-              <Route path="/organizations" element={<Organizations />} />
+                  <Route path="/organizations" element={<Organizations />} />
+                  <Route path="/organizations/:id" element={<OrganizationDetails />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />
               <Route path="/permissions" element={<Permissions />} />
