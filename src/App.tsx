@@ -39,7 +39,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Auth routes - outside AppLayout */}
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             
@@ -47,7 +47,7 @@ const App = () => (
             <Route path="/*" element={
               <AppLayout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/organizations" element={<Organizations />} />
                   <Route path="/organizations/:id" element={<OrganizationDetails />} />
               <Route path="/users" element={<Users />} />
