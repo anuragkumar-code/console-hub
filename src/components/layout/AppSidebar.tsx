@@ -32,7 +32,7 @@ interface NavItemConfig {
 }
 
 const navItems: NavItemConfig[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/', roles: ['god_admin', 'org_admin', 'agent'] },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['god_admin', 'org_admin', 'agent'] },
   { label: 'Organizations', icon: Building2, path: '/organizations', roles: ['god_admin'] },
   { label: 'Users', icon: Users, path: '/users', roles: ['god_admin'] },
   { label: 'Roles', icon: Shield, path: '/roles', roles: ['god_admin'] },
