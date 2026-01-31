@@ -1,4 +1,60 @@
-// User Roles
+// ============================================
+// RBAC Types - Role-Based Access Control
+// ============================================
+
+// Permission action types
+export type PermissionAction = 'read' | 'create' | 'update' | 'delete';
+
+// Permission from API response
+// Format: { resource: "users", action: "read" }
+export interface Permission {
+  id?: string;
+  resource: string;
+  action: PermissionAction;
+  name?: string;
+  description?: string;
+  module?: string;
+}
+
+// Role from API response
+export interface Role {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  is_system: boolean;
+  organization_id?: string | null;
+  permissions: Permission[];
+}
+
+// Authenticated user - used throughout the app
+export interface AuthUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName?: string;
+  phone?: string;
+  avatar?: string;
+  role: Role;
+  organizationId?: string;
+  organizationName?: string;
+  isGodAdmin: boolean;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
+// Re-export auth types from services for convenience
+export type { 
+  StoredAuthUser,
+  LoginRequest,
+  LoginResponseData,
+  ApiUser,
+  ApiRole,
+  ApiPermission,
+} from '@/services/auth/types';
+
+// Legacy User type - keeping for backward compatibility with existing components
+// TODO: Gradually migrate components to use AuthUser
 export type UserRole = 'god_admin' | 'org_admin' | 'agent';
 
 export interface User {
@@ -106,28 +162,6 @@ export interface Message {
   isInternalNote?: boolean;
 }
 
-// New RBAC structure based on DB schema
-export interface Permission {
-  id: string;
-  name: string;
-  slug: string;
-  resource: string;
-  action: 'read' | 'create' | 'update' | 'delete';
-  description: string;
-  module: string;
-  is_system: boolean;
-}
-
-export interface Role {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  is_system: boolean;
-  organization_id: string | null; // null for system roles
-  permissions?: string[]; // array of permission slugs
-}
-
 // Legacy permission structure for display (keeping for backward compatibility)
 export interface ModulePermission {
   module: string;
@@ -135,6 +169,29 @@ export interface ModulePermission {
   create: boolean;
   update: boolean;
   delete: boolean;
+}
+
+// Mock data permission type (for mockData.ts compatibility)
+export interface MockPermission {
+  id: string;
+  name: string;
+  slug: string;
+  resource: string;
+  action: PermissionAction;
+  description: string;
+  module: string;
+  is_system: boolean;
+}
+
+// Mock data role type (for mockData.ts compatibility)
+export interface MockRole {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  is_system: boolean;
+  organization_id: string | null;
+  permissions: string[]; // array of permission slugs
 }
 
 export interface AuditLog {
@@ -148,7 +205,21 @@ export interface AuditLog {
 }
 
 // Navigation types
+export interface NavItemPermission {
+  resource: string;
+  action: PermissionAction;
+}
+
 export interface NavItem {
+  label: string;
+  icon: string;
+  path: string;
+  permission?: NavItemPermission; // Permission required to see this nav item
+  alwaysVisible?: boolean; // For items like Profile that are always visible
+}
+
+// Legacy NavItem with roles (for backward compatibility during migration)
+export interface LegacyNavItem {
   label: string;
   icon: string;
   path: string;

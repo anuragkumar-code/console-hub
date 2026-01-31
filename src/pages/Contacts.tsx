@@ -6,9 +6,11 @@ import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
 import { contacts } from '@/data/mockData';
 import { Contact, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function Contacts() {
   const [searchQuery, setSearchQuery] = useState('');
+  const { canCreate, canUpdate, canDelete } = usePermission();
 
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -16,15 +18,32 @@ export default function Contacts() {
     contact.company?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Build actions array based on permissions
+  const getContactActions = (contactId: string) => {
+    const actions: Array<{ label: string; onClick: () => void; destructive?: boolean }> = [
+      { label: 'View Details', onClick: () => console.log('View', contactId) },
+    ];
+
+    if (canUpdate('contacts')) {
+      actions.push({ label: 'Edit', onClick: () => console.log('Edit', contactId) });
+    }
+
+    if (canDelete('contacts')) {
+      actions.push({ label: 'Delete', onClick: () => console.log('Delete', contactId), destructive: true });
+    }
+
+    return actions;
+  };
+
   return (
     <div>
       <PageHeader
         title="Contacts"
         description="Manage your customer contacts"
-        action={{
+        action={canCreate('contacts') ? {
           label: 'Add Contact',
           onClick: () => console.log('Add contact'),
-        }}
+        } : undefined}
       >
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -66,11 +85,7 @@ export default function Contacts() {
                 { label: 'Owner', value: contact.owner },
               ]}
               onClick={() => console.log('View contact', contact.id)}
-              actions={[
-                { label: 'View Details', onClick: () => console.log('View', contact.id) },
-                { label: 'Edit', onClick: () => console.log('Edit', contact.id) },
-                { label: 'Delete', onClick: () => console.log('Delete', contact.id), destructive: true },
-              ]}
+              actions={getContactActions(contact.id)}
             />
           ))}
         </CardGrid>

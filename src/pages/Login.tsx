@@ -1,38 +1,83 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isAuthenticated, isLoading, error, clearError, user } = useAuth();
+  
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false,
   });
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Get redirect path from location state
+  const from = (location.state as { from?: Location })?.from?.pathname || '/dashboard';
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, from]);
+
+  // Clear errors when form changes
+  useEffect(() => {
+    if (error) clearError();
+    if (formError) setFormError(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.email, formData.password]);
+
+  const validateForm = (): boolean => {
+    if (!formData.email.trim()) {
+      setFormError('Email is required');
+      return false;
+    }
+    if (!formData.password) {
+      setFormError('Password is required');
+      return false;
+    }
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setFormError('Please enter a valid email address');
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    if (!validateForm()) return;
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    toast({
-      title: 'Login successful',
-      description: 'Welcome back! Redirecting to dashboard...',
-    });
-
-    setIsLoading(false);
-    navigate('/');
+    try {
+      await login(formData.email, formData.password);
+      
+      toast({
+        title: 'Login successful',
+        description: 'Welcome back! Redirecting...',
+      });
+      
+      // Navigation happens in useEffect when isAuthenticated changes
+    } catch (err) {
+      // Error is already set in AuthContext, but we can also show it locally
+      const message = err instanceof Error ? err.message : 'Login failed';
+      setFormError(message);
+    }
   };
 
   return (
@@ -57,6 +102,14 @@ export default function Login() {
             </CardHeader>
 
             <CardContent className="space-y-4">
+              {/* Error Alert */}
+              {(formError || error) && (
+                <Alert variant="destructive" className="animate-fade-in">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{formError || error}</AlertDescription>
+                </Alert>
+              )}
+
               {/* Email Field */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
@@ -71,6 +124,8 @@ export default function Login() {
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     required
                     disabled={isLoading}
+                    autoComplete="email"
+                    autoFocus
                   />
                 </div>
               </div>
@@ -82,6 +137,7 @@ export default function Login() {
                   <Link 
                     to="/forgot-password" 
                     className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    tabIndex={-1}
                   >
                     Forgot password?
                   </Link>
@@ -97,6 +153,7 @@ export default function Login() {
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                     required
                     disabled={isLoading}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"

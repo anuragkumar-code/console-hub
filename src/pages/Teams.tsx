@@ -5,23 +5,42 @@ import { DataCard } from '@/components/ui/data-card';
 import { teams } from '@/data/mockData';
 import { UsersRound, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function Teams() {
   const [searchQuery, setSearchQuery] = useState('');
+  const { canCreate, canUpdate, canDelete } = usePermission();
 
   const filteredTeams = teams.filter(team =>
     team.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Build actions array based on permissions
+  const getTeamActions = (teamId: string) => {
+    const actions: Array<{ label: string; onClick: () => void; destructive?: boolean }> = [
+      { label: 'View Members', onClick: () => console.log('View members', teamId) },
+    ];
+
+    if (canUpdate('teams')) {
+      actions.push({ label: 'Edit', onClick: () => console.log('Edit', teamId) });
+    }
+
+    if (canDelete('teams')) {
+      actions.push({ label: 'Delete', onClick: () => console.log('Delete', teamId), destructive: true });
+    }
+
+    return actions;
+  };
 
   return (
     <div>
       <PageHeader
         title="Teams"
         description="Manage teams and team members"
-        action={{
+        action={canCreate('teams') ? {
           label: 'Create Team',
           onClick: () => console.log('Create team'),
-        }}
+        } : undefined}
       >
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -47,11 +66,7 @@ export default function Teams() {
                 { label: 'Created', value: new Date(team.createdAt).toLocaleDateString() },
               ]}
               onClick={() => console.log('View team', team.id)}
-              actions={[
-                { label: 'View Members', onClick: () => console.log('View members', team.id) },
-                { label: 'Edit', onClick: () => console.log('Edit', team.id) },
-                { label: 'Delete', onClick: () => console.log('Delete', team.id), destructive: true },
-              ]}
+              actions={getTeamActions(team.id)}
             />
           ))}
         </CardGrid>
