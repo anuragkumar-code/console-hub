@@ -43,6 +43,19 @@ export const storage = {
     localStorage.setItem(config.refreshTokenKey, token);
   },
   
+  // Convenience method to set both tokens at once
+  setTokens: (accessToken: string, refreshToken: string): void => {
+    localStorage.setItem(config.accessTokenKey, accessToken);
+    localStorage.setItem(config.refreshTokenKey, refreshToken);
+  },
+  
+  // Alias for clearAuth to match common naming convention
+  clearTokens: (): void => {
+    localStorage.removeItem(config.accessTokenKey);
+    localStorage.removeItem(config.refreshTokenKey);
+    localStorage.removeItem(config.userKey);
+  },
+  
   getUser: <T>(): T | null => {
     const user = localStorage.getItem(config.userKey);
     if (!user) return null;
@@ -207,6 +220,27 @@ export const apiHelpers = {
    */
   isApiError: (error: unknown): error is AxiosError<ApiError> => {
     return axios.isAxiosError(error);
+  },
+
+  /**
+   * Check if error is a network error
+   */
+  isNetworkError: (error: unknown): boolean => {
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      return (error as { code: string }).code === 'ERR_NETWORK';
+    }
+    return false;
+  },
+
+  /**
+   * Check if error is an unauthorized error (401)
+   */
+  isUnauthorizedError: (error: unknown): boolean => {
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+      const response = (error as { response?: { status?: number } }).response;
+      return response?.status === 401;
+    }
+    return false;
   },
 
   /**

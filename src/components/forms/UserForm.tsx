@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,20 +26,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { UserPlus, Pencil } from 'lucide-react';
-import { User, UserRole } from '@/types';
-import { organizations, roles } from '@/data/mockData';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { UserPlus, Pencil, Loader2, AlertCircle } from 'lucide-react';
+import { useCreateUser, useUpdateUser, useRoles, useOrganizations } from '@/hooks/queries';
+import { useAuth } from '@/contexts/AuthContext';
+import type { User, CreateUserRequest, UpdateUserRequest, UserStatus } from '@/services/users';
 
 const userSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  role: z.string().min(1, 'Please select a role'),
-  organizationId: z.string().min(1, 'Please select an organization'),
-  status: z.enum(['active', 'inactive']),
+  first_name: z.string().min(2, 'First name must be at least 2 characters'),
+  last_name: z.string().optional(),
+  role_id: z.string().min(1, 'Please select a role'),
+  organization_id: z.string().optional(),
+  status: z.enum(['active', 'inactive', 'pending', 'suspended']),
+  send_invite: z.boolean().optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -48,89 +50,130 @@ interface UserFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user?: User | null;
-  onSubmit?: (data: UserFormValues) => void;
-  isGodAdmin?: boolean;
-  currentOrgId?: string;
 }
 
-const statusOptions = [
+const statusOptions: { value: UserStatus; label: string }[] = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'suspended', label: 'Suspended' },
 ];
 
-export function UserForm({ 
-  open, 
-  onOpenChange, 
-  user, 
-  onSubmit, 
-  isGodAdmin = true,
-  currentOrgId 
-}: UserFormProps) {
+export function UserForm({ open, onOpenChange, user }: UserFormProps) {
+  const [error, setError] = useState<string | null>(null);
+  const { isGodAdmin } = useAuth();
   const isEditing = !!user;
 
+  // Fetch roles and organizations
+  const { data: rolesData, isLoading: rolesLoading } = useRoles();
+  const { data: orgsData, isLoading: orgsLoading } = useOrganizations();
+
+  // Mutations
+  const createMutation = useCreateUser();
+  const updateMutation = useUpdateUser();
+
+  const roles = rolesData?.items || [];
+  const organizations = orgsData?.items || [];
+
+  // Filter roles based on context (non-god admins shouldn't assign god_admin role)
+  const availableRoles = isGodAdmin 
+    ? roles 
+    : roles.filter(r => !['super_admin', 'god_admin', 'platform_admin'].includes(r.slug));
+
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(
-      isEditing 
-        ? userSchema.omit({ password: true }).extend({ password: z.string().optional() })
-        : userSchema.refine((data) => data.password && data.password.length >= 8, {
-            message: 'Password is required for new users',
-            path: ['password'],
-          })
-    ),
+    resolver: zodResolver(userSchema),
     defaultValues: {
       email: '',
       phone: '',
       password: '',
-      firstName: '',
-      lastName: '',
-      role: '',
-      organizationId: currentOrgId || '',
+      first_name: '',
+      last_name: '',
+      role_id: '',
+      organization_id: '',
       status: 'active',
+      send_invite: true,
     },
   });
 
+  // Populate form when editing
   useEffect(() => {
     if (user) {
-      const nameParts = user.name.split(' ');
       form.reset({
         email: user.email,
-        phone: '',
+        phone: user.phone || '',
         password: '',
-        firstName: nameParts[0] || '',
-        lastName: nameParts.slice(1).join(' ') || '',
-        role: user.role,
-        organizationId: user.organizationId || '',
-        status: 'active',
+        first_name: user.first_name,
+        last_name: user.last_name || '',
+        role_id: user.role_id,
+        organization_id: user.organization_id || '',
+        status: user.status,
+        send_invite: false,
       });
     } else {
       form.reset({
         email: '',
         phone: '',
         password: '',
-        firstName: '',
-        lastName: '',
-        role: '',
-        organizationId: currentOrgId || '',
+        first_name: '',
+        last_name: '',
+        role_id: '',
+        organization_id: '',
         status: 'active',
+        send_invite: true,
       });
     }
-  }, [user, currentOrgId, form]);
+  }, [user, form]);
 
-  const handleSubmit = (data: UserFormValues) => {
-    console.log('User data:', data);
-    onSubmit?.(data);
-    toast.success(isEditing ? 'User updated successfully' : 'User created successfully');
+  const handleSubmit = async (data: UserFormValues) => {
+    setError(null);
+
+    try {
+      if (isEditing && user) {
+        // Update user
+        const updateData: UpdateUserRequest = {
+          email: data.email,
+          first_name: data.first_name,
+          last_name: data.last_name || undefined,
+          phone: data.phone || undefined,
+          role_id: data.role_id,
+          status: data.status,
+        };
+        await updateMutation.mutateAsync({ id: user.id, data: updateData });
+      } else {
+        // Create user
+        const createData: CreateUserRequest = {
+          email: data.email,
+          password: data.password || undefined,
+          first_name: data.first_name,
+          last_name: data.last_name || undefined,
+          phone: data.phone || undefined,
+          role_id: data.role_id,
+          organization_id: data.organization_id || undefined,
+          status: data.status,
+          send_invite: data.send_invite,
+        };
+        await createMutation.mutateAsync(createData);
+      }
+
+      // Reset form and close on success
+      form.reset();
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
+  const handleClose = () => {
     form.reset();
+    setError(null);
     onOpenChange(false);
   };
 
-  // Filter roles based on context
-  const availableRoles = isGodAdmin 
-    ? roles 
-    : roles.filter(r => r.slug !== 'super_admin' && r.slug !== 'god_admin');
+  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isLoading = rolesLoading || orgsLoading;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-6">
           <SheetTitle className="flex items-center gap-2">
@@ -153,6 +196,13 @@ export function UserForm({
           </SheetDescription>
         </SheetHeader>
 
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             {/* Personal Information */}
@@ -162,12 +212,16 @@ export function UserForm({
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="firstName"
+                  name="first_name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>First Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="John" {...field} />
+                        <Input 
+                          placeholder="John" 
+                          {...field} 
+                          disabled={isPending}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -176,12 +230,16 @@ export function UserForm({
 
                 <FormField
                   control={form.control}
-                  name="lastName"
+                  name="last_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last Name *</FormLabel>
+                      <FormLabel>Last Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Doe" {...field} />
+                        <Input 
+                          placeholder="Doe" 
+                          {...field} 
+                          disabled={isPending}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -205,6 +263,7 @@ export function UserForm({
                         type="email" 
                         placeholder="john.doe@example.com" 
                         {...field} 
+                        disabled={isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -223,6 +282,7 @@ export function UserForm({
                         type="tel" 
                         placeholder="+1 (555) 000-0000" 
                         {...field} 
+                        disabled={isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -232,29 +292,30 @@ export function UserForm({
             </div>
 
             {/* Security */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Security</h3>
-              
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Password {!isEditing && '*'}
-                    </FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder={isEditing ? 'Leave blank to keep current' : 'Enter password'}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {!isEditing && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground">Security</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="Leave blank to send invite"
+                          {...field} 
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             {/* Role & Organization */}
             <div className="space-y-4">
@@ -262,19 +323,23 @@ export function UserForm({
               
               <FormField
                 control={form.control}
-                name="role"
+                name="role_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={isPending || isLoading}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
+                          <SelectValue placeholder={rolesLoading ? 'Loading roles...' : 'Select a role'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {availableRoles.map((role) => (
-                          <SelectItem key={role.id} value={role.slug}>
+                          <SelectItem key={role.id} value={role.id}>
                             {role.name}
                           </SelectItem>
                         ))}
@@ -285,20 +350,25 @@ export function UserForm({
                 )}
               />
 
-              {isGodAdmin ? (
+              {isGodAdmin && (
                 <FormField
                   control={form.control}
-                  name="organizationId"
+                  name="organization_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Organization *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormLabel>Organization</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                        disabled={isPending || isLoading}
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select an organization" />
+                            <SelectValue placeholder={orgsLoading ? 'Loading orgs...' : 'Select an organization'} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Platform User (No Organization)</SelectItem>
                           {organizations.map((org) => (
                             <SelectItem key={org.id} value={org.id}>
                               {org.name}
@@ -310,13 +380,6 @@ export function UserForm({
                     </FormItem>
                   )}
                 />
-              ) : (
-                <div className="space-y-2">
-                  <FormLabel>Organization</FormLabel>
-                  <div className="px-3 py-2 bg-muted rounded-md text-sm">
-                    {organizations.find(o => o.id === currentOrgId)?.name || 'Current Organization'}
-                  </div>
-                </div>
               )}
 
               <FormField
@@ -325,7 +388,11 @@ export function UserForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={isPending}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -350,13 +417,25 @@ export function UserForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={handleClose}
                 className="flex-1"
+                disabled={isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1">
-                {isEditing ? 'Update User' : 'Create User'}
+              <Button 
+                type="submit" 
+                className="flex-1"
+                disabled={isPending || isLoading}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  isEditing ? 'Update User' : 'Create User'
+                )}
               </Button>
             </div>
           </form>

@@ -27,21 +27,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { Building2, Upload, X } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Building2, Upload, X, Loader2, AlertCircle } from 'lucide-react';
+import { useCreateOrganization } from '@/hooks/queries';
+import type { CreateOrganizationRequest, PlanType } from '@/services/organizations';
 
 const organizationSchema = z.object({
   name: z.string().min(2, 'Organization name must be at least 2 characters'),
-  plan_type: z.enum(['free', 'starter', 'professional', 'enterprise']),
+  plan_type: z.enum(['free', 'trial', 'starter', 'professional', 'enterprise']),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional(),
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
   timezone: z.string().optional(),
   currency: z.string().optional(),
-  maxUsers: z.string().optional(),
-  maxStorage: z.string().optional(),
-  dateFormat: z.string().optional(),
-  timeFormat: z.string().optional(),
+  max_users: z.coerce.number().optional(),
+  max_storage: z.coerce.number().optional(),
+  date_format: z.string().optional(),
+  industry: z.string().optional(),
 });
 
 type OrganizationFormValues = z.infer<typeof organizationSchema>;
@@ -49,14 +51,27 @@ type OrganizationFormValues = z.infer<typeof organizationSchema>;
 interface CreateOrganizationFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit?: (data: OrganizationFormValues) => void;
 }
 
-const planTypes = [
+const planTypes: { value: PlanType; label: string }[] = [
   { value: 'free', label: 'Free' },
+  { value: 'trial', label: 'Trial' },
   { value: 'starter', label: 'Starter' },
   { value: 'professional', label: 'Professional' },
   { value: 'enterprise', label: 'Enterprise' },
+];
+
+const industries = [
+  { value: 'technology', label: 'Technology' },
+  { value: 'healthcare', label: 'Healthcare' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'education', label: 'Education' },
+  { value: 'retail', label: 'Retail' },
+  { value: 'manufacturing', label: 'Manufacturing' },
+  { value: 'consulting', label: 'Consulting' },
+  { value: 'real_estate', label: 'Real Estate' },
+  { value: 'media', label: 'Media & Entertainment' },
+  { value: 'other', label: 'Other' },
 ];
 
 const timezones = [
@@ -83,62 +98,60 @@ const currencies = [
   { value: 'CAD', label: 'CAD (C$)' },
 ];
 
-const maxUsersRanges = [
-  { value: '0-10', label: '0 - 10 users' },
-  { value: '10-50', label: '10 - 50 users' },
-  { value: '50-100', label: '50 - 100 users' },
-  { value: '100+', label: '100+ users' },
+const maxUsersOptions = [
+  { value: 10, label: '10 users' },
+  { value: 25, label: '25 users' },
+  { value: 50, label: '50 users' },
+  { value: 100, label: '100 users' },
+  { value: 250, label: '250 users' },
+  { value: 500, label: '500 users' },
+  { value: 1000, label: '1,000 users' },
 ];
 
 const maxStorageOptions = [
-  { value: '1', label: '1 GB' },
-  { value: '5', label: '5 GB' },
-  { value: '10', label: '10 GB' },
-  { value: '25', label: '25 GB' },
-  { value: '50', label: '50 GB' },
-  { value: '100', label: '100 GB' },
-  { value: '250', label: '250 GB' },
-  { value: '500', label: '500 GB' },
-  { value: '1000', label: '1 TB' },
+  { value: 1, label: '1 GB' },
+  { value: 5, label: '5 GB' },
+  { value: 10, label: '10 GB' },
+  { value: 25, label: '25 GB' },
+  { value: 50, label: '50 GB' },
+  { value: 100, label: '100 GB' },
+  { value: 250, label: '250 GB' },
+  { value: 500, label: '500 GB' },
+  { value: 1000, label: '1 TB' },
 ];
 
 const dateFormats = [
   { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
   { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
   { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
-  { value: 'DD-MM-YYYY', label: 'DD-MM-YYYY' },
 ];
 
-const timeFormats = [
-  { value: '12h', label: '12 Hour (AM/PM)' },
-  { value: '24h', label: '24 Hour' },
-];
-
-export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateOrganizationFormProps) {
+export function CreateOrganizationForm({ open, onOpenChange }: CreateOrganizationFormProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const createMutation = useCreateOrganization();
 
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       name: '',
-      plan_type: 'free',
+      plan_type: 'trial',
       email: '',
       phone: '',
       website: '',
       timezone: 'UTC',
       currency: 'USD',
-      maxUsers: '0-10',
-      maxStorage: '5',
-      dateFormat: 'MM/DD/YYYY',
-      timeFormat: '12h',
+      max_users: 10,
+      max_storage: 5,
+      date_format: 'YYYY-MM-DD',
+      industry: '',
     },
   });
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setLogoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
@@ -148,22 +161,50 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
   };
 
   const removeLogo = () => {
-    setLogoFile(null);
     setLogoPreview(null);
   };
 
-  const handleSubmit = (data: OrganizationFormValues) => {
-    console.log('Organization data:', { ...data, logo: logoFile });
-    onSubmit?.(data);
-    toast.success('Organization created successfully');
+  const handleSubmit = async (data: OrganizationFormValues) => {
+    setError(null);
+
+    // Transform form data to API request format
+    const requestData: CreateOrganizationRequest = {
+      name: data.name,
+      plan_type: data.plan_type as PlanType,
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      website: data.website || undefined,
+      timezone: data.timezone,
+      currency: data.currency,
+      max_users: data.max_users,
+      max_storage: data.max_storage,
+      date_format: data.date_format,
+      industry: data.industry || undefined,
+    };
+
+    try {
+      await createMutation.mutateAsync(requestData);
+      
+      // Reset form and close on success
+      form.reset();
+      setLogoPreview(null);
+      onOpenChange(false);
+    } catch (err) {
+      // Error is handled by the mutation's onError callback
+      // But we can also show it in the form
+      setError(err instanceof Error ? err.message : 'Failed to create organization');
+    }
+  };
+
+  const handleClose = () => {
     form.reset();
-    setLogoFile(null);
     setLogoPreview(null);
+    setError(null);
     onOpenChange(false);
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-6">
           <SheetTitle className="flex items-center gap-2">
@@ -174,6 +215,13 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
             Add a new organization to the platform. Fill in the details below.
           </SheetDescription>
         </SheetHeader>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -188,7 +236,11 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                   <FormItem>
                     <FormLabel>Organization Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter organization name" {...field} />
+                      <Input 
+                        placeholder="Enter organization name" 
+                        {...field} 
+                        disabled={createMutation.isPending}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -201,7 +253,11 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Plan Type *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={createMutation.isPending}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a plan" />
@@ -211,6 +267,35 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                         {planTypes.map((plan) => (
                           <SelectItem key={plan.value} value={plan.value}>
                             {plan.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="industry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Industry</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={createMutation.isPending}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select industry" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {industries.map((industry) => (
+                          <SelectItem key={industry.value} value={industry.value}>
+                            {industry.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -235,6 +320,7 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                         type="button"
                         onClick={removeLogo}
                         className="absolute -top-2 -right-2 rounded-full bg-destructive text-destructive-foreground p-1"
+                        disabled={createMutation.isPending}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -247,6 +333,7 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                         accept="image/*"
                         onChange={handleLogoChange}
                         className="hidden"
+                        disabled={createMutation.isPending}
                       />
                     </label>
                   )}
@@ -268,7 +355,12 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="org@example.com" {...field} />
+                      <Input 
+                        type="email" 
+                        placeholder="org@example.com" 
+                        {...field} 
+                        disabled={createMutation.isPending}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -282,7 +374,12 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="+1 (555) 000-0000" {...field} />
+                      <Input 
+                        type="tel" 
+                        placeholder="+1 (555) 000-0000" 
+                        {...field} 
+                        disabled={createMutation.isPending}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -296,7 +393,12 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                   <FormItem>
                     <FormLabel>Website</FormLabel>
                     <FormControl>
-                      <Input type="url" placeholder="https://example.com" {...field} />
+                      <Input 
+                        type="url" 
+                        placeholder="https://example.com" 
+                        {...field} 
+                        disabled={createMutation.isPending}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -310,20 +412,24 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
               
               <FormField
                 control={form.control}
-                name="maxUsers"
+                name="max_users"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Max Users</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(val) => field.onChange(parseInt(val))} 
+                      defaultValue={field.value?.toString()}
+                      disabled={createMutation.isPending}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select user range" />
+                          <SelectValue placeholder="Select user limit" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {maxUsersRanges.map((range) => (
-                          <SelectItem key={range.value} value={range.value}>
-                            {range.label}
+                        {maxUsersOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value.toString()}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -338,11 +444,15 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
 
               <FormField
                 control={form.control}
-                name="maxStorage"
+                name="max_storage"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Max Storage</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(val) => field.onChange(parseInt(val))} 
+                      defaultValue={field.value?.toString()}
+                      disabled={createMutation.isPending}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select storage limit" />
@@ -350,14 +460,14 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                       </FormControl>
                       <SelectContent>
                         {maxStorageOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
+                          <SelectItem key={option.value} value={option.value.toString()}>
                             {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Maximum storage allocation in GB
+                      Maximum storage allocation
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -375,7 +485,11 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Timezone</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={createMutation.isPending}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select timezone" />
@@ -394,48 +508,27 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Currency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select currency" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {currencies.map((curr) => (
-                          <SelectItem key={curr.value} value={curr.value}>
-                            {curr.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="dateFormat"
+                  name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Date Format</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel>Currency</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        disabled={createMutation.isPending}
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select format" />
+                            <SelectValue placeholder="Select currency" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {dateFormats.map((fmt) => (
-                            <SelectItem key={fmt.value} value={fmt.value}>
-                              {fmt.label}
+                          {currencies.map((curr) => (
+                            <SelectItem key={curr.value} value={curr.value}>
+                              {curr.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -447,18 +540,22 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
 
                 <FormField
                   control={form.control}
-                  name="timeFormat"
+                  name="date_format"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Time Format</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel>Date Format</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        disabled={createMutation.isPending}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select format" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {timeFormats.map((fmt) => (
+                          {dateFormats.map((fmt) => (
                             <SelectItem key={fmt.value} value={fmt.value}>
                               {fmt.label}
                             </SelectItem>
@@ -477,13 +574,25 @@ export function CreateOrganizationForm({ open, onOpenChange, onSubmit }: CreateO
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={handleClose}
                 className="flex-1"
+                disabled={createMutation.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1">
-                Create Organization
+              <Button 
+                type="submit" 
+                className="flex-1"
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Organization'
+                )}
               </Button>
             </div>
           </form>

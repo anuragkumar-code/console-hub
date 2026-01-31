@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
-import { roles as mockRoles, permissions as allPermissions } from '@/data/mockData';
-import { Role, Permission } from '@/types';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CardSkeleton } from '@/components/ui/page-loader';
 import {
   Sheet,
@@ -19,12 +18,21 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Shield, ChevronDown, ChevronUp, Pencil, Trash2, Lock, Search } from 'lucide-react';
-import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { 
+  Shield, ChevronDown, ChevronUp, Pencil, Trash2, Lock, Search, 
+  RefreshCw, AlertCircle, Loader2 
+} from 'lucide-react';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { 
+  useRoles, 
+  useGroupedPermissions,
+  useCreateRole, 
+  useUpdateRole, 
+  useDeleteRole,
+} from '@/hooks/queries';
+import type { Role, Permission, CreateRoleRequest, UpdateRoleRequest } from '@/services/roles';
 
 export default function Roles() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [expandedRole, setExpandedRole] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -36,25 +44,40 @@ export default function Roles() {
     slug: '',
     description: '',
     is_system: false,
-    permissions: [] as string[],
+    permission_ids: [] as string[],
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setRoles(mockRoles);
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+  // API Hooks
+  const { 
+    data: rolesData, 
+    isLoading: rolesLoading, 
+    isError: rolesError, 
+    error: rolesErrorMsg,
+    refetch: refetchRoles 
+  } = useRoles();
+  
+  const { 
+    data: groupedPermissions, 
+    isLoading: permsLoading 
+  } = useGroupedPermissions();
+
+  // Mutations
+  const createMutation = useCreateRole();
+  const updateMutation = useUpdateRole();
+  const deleteMutation = useDeleteRole();
+
+  const roles = rolesData?.items || [];
+  const isLoading = rolesLoading || permsLoading;
+
+  // Filter roles by search
+  const filteredRoles = roles.filter(role =>
+    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (role.description?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   const toggleExpanded = (roleId: string) => {
     setExpandedRole(expandedRole === roleId ? '' : roleId);
   };
-
-  const filteredRoles = roles.filter(role =>
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleCreateRole = () => {
     setEditingRole(null);
@@ -63,7 +86,7 @@ export default function Roles() {
       slug: '',
       description: '',
       is_system: false,
-      permissions: [],
+      permission_ids: [],
     });
     setIsSheetOpen(true);
   };
@@ -73,74 +96,75 @@ export default function Roles() {
     setFormData({
       name: role.name,
       slug: role.slug,
-      description: role.description,
+      description: role.description || '',
       is_system: role.is_system,
-      permissions: role.permissions || [],
+      permission_ids: role.permissions?.map(p => p.id) || [],
     });
     setIsSheetOpen(true);
   };
 
-  const handleSaveRole = () => {
-    if (editingRole) {
-      // Update existing role
-      setRoles(prev =>
-        prev.map(r =>
-          r.id === editingRole.id
-            ? { ...r, ...formData }
-            : r
-        )
-      );
-    } else {
-      // Create new role
-      const newRole: Role = {
-        id: `r-${Date.now()}`,
-        ...formData,
-        organization_id: 'org-1',
-      };
-      setRoles(prev => [...prev, newRole]);
+  const handleSaveRole = async () => {
+    try {
+      if (editingRole) {
+        const updateData: UpdateRoleRequest = {
+          name: formData.name,
+          description: formData.description || undefined,
+          permission_ids: formData.permission_ids,
+        };
+        await updateMutation.mutateAsync({ id: editingRole.id, data: updateData });
+      } else {
+        const createData: CreateRoleRequest = {
+          name: formData.name,
+          slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '_'),
+          description: formData.description || undefined,
+          permission_ids: formData.permission_ids,
+        };
+        await createMutation.mutateAsync(createData);
+      }
+      setIsSheetOpen(false);
+    } catch {
+      // Error handling is done in the mutation hooks
     }
-    setIsSheetOpen(false);
   };
 
-  const handleDeleteRole = (roleId: string) => {
-    setRoles(prev => prev.filter(r => r.id !== roleId));
+  const handleDeleteRole = async (roleId: string) => {
+    if (window.confirm('Are you sure you want to delete this role? This action cannot be undone.')) {
+      await deleteMutation.mutateAsync(roleId);
+    }
   };
 
-  const togglePermission = (permSlug: string) => {
+  const togglePermission = (permId: string) => {
     setFormData(prev => ({
       ...prev,
-      permissions: prev.permissions.includes(permSlug)
-        ? prev.permissions.filter(p => p !== permSlug)
-        : [...prev.permissions, permSlug],
+      permission_ids: prev.permission_ids.includes(permId)
+        ? prev.permission_ids.filter(p => p !== permId)
+        : [...prev.permission_ids, permId],
     }));
   };
 
-  // Group permissions by module
-  const groupedPermissions = allPermissions.reduce((acc, perm) => {
-    if (!acc[perm.module]) acc[perm.module] = [];
-    acc[perm.module].push(perm);
-    return acc;
-  }, {} as Record<string, Permission[]>);
-
-  // Get permission details for a role
-  const getRolePermissionsByModule = (role: Role) => {
-    const rolePerms = role.permissions || [];
-    const modules: Record<string, { read: boolean; create: boolean; update: boolean; delete: boolean }> = {};
+  // Get permission matrix for a role
+  const getRolePermissionMatrix = (role: Role) => {
+    const rolePermIds = new Set(role.permissions?.map(p => p.id) || []);
+    const matrix: Record<string, { read: boolean; create: boolean; update: boolean; delete: boolean }> = {};
     
-    allPermissions.forEach(perm => {
-      if (!modules[perm.resource]) {
-        modules[perm.resource] = { read: false, create: false, update: false, delete: false };
-      }
-      if (rolePerms.includes(perm.slug)) {
-        modules[perm.resource][perm.action] = true;
-      }
-    });
+    if (groupedPermissions) {
+      Object.values(groupedPermissions).flat().forEach(perm => {
+        if (!matrix[perm.resource]) {
+          matrix[perm.resource] = { read: false, create: false, update: false, delete: false };
+        }
+        if (rolePermIds.has(perm.id)) {
+          matrix[perm.resource][perm.action as keyof typeof matrix[string]] = true;
+        }
+      });
+    }
     
-    return Object.entries(modules).map(([resource, perms]) => ({
+    return Object.entries(matrix).map(([resource, perms]) => ({
       resource: resource.charAt(0).toUpperCase() + resource.slice(1).replace('_', ' '),
       ...perms,
     }));
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <div>
@@ -154,20 +178,42 @@ export default function Roles() {
       />
 
       <div className="p-4 md:p-6 space-y-4">
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search roles..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        {/* Search & Refresh */}
+        <div className="flex items-center gap-2">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search roles..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetchRoles()}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
 
-        {isLoading ? (
-          <CardSkeleton count={3} />
-        ) : (
+        {/* Error State */}
+        {rolesError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {rolesErrorMsg instanceof Error ? rolesErrorMsg.message : 'Failed to load roles'}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Loading State */}
+        {isLoading && <CardSkeleton count={3} />}
+
+        {/* Roles List */}
+        {!isLoading && !rolesError && (
           <div className="space-y-4">
             {filteredRoles.map((role, index) => (
               <Card 
@@ -201,6 +247,9 @@ export default function Roles() {
                         <p className="text-sm text-muted-foreground">{role.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Slug: <code className="bg-secondary px-1 rounded">{role.slug}</code>
+                          {role.user_count !== undefined && (
+                            <span className="ml-2">• {role.user_count} users</span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -225,6 +274,7 @@ export default function Roles() {
                               e.stopPropagation();
                               handleDeleteRole(role.id);
                             }}
+                            disabled={deleteMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -252,7 +302,7 @@ export default function Roles() {
                       </div>
 
                       {/* Permission Matrix Rows */}
-                      {getRolePermissionsByModule(role).map((perm, idx) => (
+                      {getRolePermissionMatrix(role).map((perm, idx) => (
                         <div 
                           key={perm.resource}
                           className={cn(
@@ -291,6 +341,12 @@ export default function Roles() {
                           </div>
                         </div>
                       ))}
+
+                      {getRolePermissionMatrix(role).length === 0 && (
+                        <div className="px-4 py-8 text-center text-muted-foreground">
+                          No permissions assigned to this role
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 )}
@@ -299,7 +355,7 @@ export default function Roles() {
 
             {filteredRoles.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
-                No roles found matching your search.
+                {searchTerm ? 'No roles found matching your search.' : 'No roles found.'}
               </div>
             )}
           </div>
@@ -320,24 +376,31 @@ export default function Roles() {
             {/* Basic Info */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Role Name</Label>
+                <Label htmlFor="name">Role Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g., Sales Manager"
+                  disabled={isPending}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
-                <Input
-                  id="slug"
-                  value={formData.slug}
-                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
-                  placeholder="e.g., sales_manager"
-                />
-              </div>
+              {!editingRole && (
+                <div className="space-y-2">
+                  <Label htmlFor="slug">Slug</Label>
+                  <Input
+                    id="slug"
+                    value={formData.slug}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      slug: e.target.value.toLowerCase().replace(/\s+/g, '_') 
+                    }))}
+                    placeholder="e.g., sales_manager"
+                    disabled={isPending}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -347,18 +410,7 @@ export default function Roles() {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe what this role can do..."
                   rows={3}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="is_system">System Role</Label>
-                  <p className="text-xs text-muted-foreground">System roles cannot be deleted</p>
-                </div>
-                <Switch
-                  id="is_system"
-                  checked={formData.is_system}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_system: checked }))}
+                  disabled={isPending}
                 />
               </div>
             </div>
@@ -366,7 +418,11 @@ export default function Roles() {
             {/* Permissions */}
             <div className="space-y-4">
               <Label>Permissions</Label>
-              {Object.entries(groupedPermissions).map(([module, perms]) => (
+              {permsLoading ? (
+                <div className="py-4 text-center text-muted-foreground">
+                  Loading permissions...
+                </div>
+              ) : groupedPermissions && Object.entries(groupedPermissions).map(([module, perms]) => (
                 <div key={module} className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">{module}</h4>
                   <div className="grid grid-cols-1 gap-2">
@@ -376,8 +432,9 @@ export default function Roles() {
                         className="flex items-center gap-3 p-2 rounded-md hover:bg-secondary/50 cursor-pointer transition-colors"
                       >
                         <Checkbox
-                          checked={formData.permissions.includes(perm.slug)}
-                          onCheckedChange={() => togglePermission(perm.slug)}
+                          checked={formData.permission_ids.includes(perm.id)}
+                          onCheckedChange={() => togglePermission(perm.id)}
+                          disabled={isPending}
                         />
                         <div className="flex-1">
                           <p className="text-sm font-medium">{perm.name}</p>
@@ -392,11 +449,25 @@ export default function Roles() {
           </div>
 
           <SheetFooter>
-            <Button variant="outline" onClick={() => setIsSheetOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsSheetOpen(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveRole} disabled={!formData.name || !formData.slug}>
-              {editingRole ? 'Update Role' : 'Create Role'}
+            <Button 
+              onClick={handleSaveRole} 
+              disabled={!formData.name || isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {editingRole ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                editingRole ? 'Update Role' : 'Create Role'
+              )}
             </Button>
           </SheetFooter>
         </SheetContent>
