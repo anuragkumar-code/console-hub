@@ -2,37 +2,31 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/hooks/use-sidebar';
-import { navItems, type NavItemConfig } from '@/config/permissions';
-import {
-  ChevronLeft,
-  ChevronRight,
-  X,
-} from 'lucide-react';
+import { navItems } from '@/config/permissions';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 export function AppSidebar() {
   const { user, hasPermission, isGodAdmin } = useAuth();
   const { collapsed, toggleCollapsed, isMobileOpen, setMobileOpen, isMobile } = useSidebar();
   const location = useLocation();
 
-  /**
-   * Filter navigation items based on user permissions
-   */
-  const filteredNavItems = navItems.filter((item: NavItemConfig) => {
-    // Always show items marked as alwaysVisible
+  // Filter nav items based on permissions
+  const filteredNavItems = navItems.filter(item => {
+    // Always visible items (like Dashboard, Profile)
     if (item.alwaysVisible) return true;
     
     // God admin can see everything
     if (isGodAdmin) return true;
     
-    // God admin only items are hidden for non-god admins
+    // God admin only items
     if (item.godAdminOnly) return false;
     
-    // Check permission if specified
+    // Check permission
     if (item.permission) {
       return hasPermission(item.permission.resource, item.permission.action);
     }
     
-    // Items without permission requirement are visible
+    // No permission required - visible to all
     return true;
   });
 
@@ -43,18 +37,8 @@ export function AppSidebar() {
     }
   };
 
-  // Get display name for the user
-  const getUserDisplayName = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
-    return user?.email || 'User';
-  };
-
   // Get role display name
-  const getRoleDisplayName = () => {
-    return user?.role?.name || 'Unknown Role';
-  };
+  const roleDisplayName = user?.role?.name || 'User';
 
   return (
     <>
@@ -132,20 +116,19 @@ export function AppSidebar() {
           })}
         </nav>
 
-        {/* User info */}
-        {(!collapsed || isMobile) && (
+        {/* User info indicator */}
+        {(!collapsed || isMobile) && user && (
           <div className="border-t border-sidebar-border p-3">
             <div className="rounded-md bg-sidebar-accent px-3 py-2">
               <p className="text-xs text-muted-foreground">Logged in as</p>
               <p className="text-sm font-medium text-sidebar-accent-foreground truncate">
-                {getUserDisplayName()}
+                {roleDisplayName}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {getRoleDisplayName()}
-                {isGodAdmin && (
-                  <span className="ml-1 text-primary">(Super Admin)</span>
-                )}
-              </p>
+              {user.organizationName && (
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {user.organizationName}
+                </p>
+              )}
             </div>
           </div>
         )}

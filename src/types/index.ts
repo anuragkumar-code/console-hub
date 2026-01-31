@@ -6,8 +6,9 @@
 export type PermissionAction = 'read' | 'create' | 'update' | 'delete';
 
 // Permission from API response
+// Format: { resource: "users", action: "read" }
 export interface Permission {
-  id: string;
+  id?: string;
   resource: string;
   action: PermissionAction;
   name?: string;
@@ -22,16 +23,16 @@ export interface Role {
   slug: string;
   description?: string;
   is_system: boolean;
-  organization_id: string | null;
+  organization_id?: string | null;
   permissions: Permission[];
 }
 
-// Authenticated user from login response
+// Authenticated user - used throughout the app
 export interface AuthUser {
   id: string;
   email: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   phone?: string;
   avatar?: string;
   role: Role;
@@ -42,16 +43,15 @@ export interface AuthUser {
   lastLoginAt?: string;
 }
 
-// Login API response structure
-export interface LoginResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: AuthUser;
-    token: string;
-    refreshToken?: string;
-  };
-}
+// Re-export auth types from services for convenience
+export type { 
+  StoredAuthUser,
+  LoginRequest,
+  LoginResponseData,
+  ApiUser,
+  ApiRole,
+  ApiPermission,
+} from '@/services/auth/types';
 
 // Legacy User type - keeping for backward compatibility with existing components
 // TODO: Gradually migrate components to use AuthUser
