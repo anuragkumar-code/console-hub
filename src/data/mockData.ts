@@ -1,6 +1,6 @@
 import type { 
   User, Organization, Contact, Account, Channel, Team, 
-  Ticket, Deal, Conversation, Message, Role, AuditLog, Permission 
+  Ticket, Deal, Conversation, Message, AuditLog, MockPermission, MockRole 
 } from '@/types';
 
 export const currentUser: User = {
@@ -92,7 +92,7 @@ export const messages: Message[] = [
 ];
 
 // Permissions based on new DB schema
-export const permissions: Permission[] = [
+export const permissions: MockPermission[] = [
   // Contacts module
   { id: 'p-1', name: 'View Contacts', slug: 'contacts.read', resource: 'contacts', action: 'read', description: 'View all contacts in the organization', module: 'CRM', is_system: true },
   { id: 'p-2', name: 'Create Contacts', slug: 'contacts.create', resource: 'contacts', action: 'create', description: 'Create new contacts', module: 'CRM', is_system: true },
@@ -152,7 +152,7 @@ export const permissions: Permission[] = [
 ];
 
 // Roles based on new DB schema
-export const roles: Role[] = [
+export const roles: MockRole[] = [
   {
     id: 'r-1',
     name: 'Super Administrator',

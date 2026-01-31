@@ -10,19 +10,54 @@ import {
   MessageSquare,
   AlertTriangle 
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isGodAdmin, setUserRole } = useAuth();
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.email || 'User';
+  };
 
   // God Admin Dashboard
-  if (user.role === 'god_admin') {
+  if (isGodAdmin) {
     return (
       <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold">Platform Overview</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Welcome back. Here's what's happening across the platform.
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Platform Overview</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Welcome back. Here's what's happening across the platform.
+            </p>
+          </div>
+          
+          {/* Role Switcher for Testing */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-xs text-muted-foreground">Test Role (Dev Mode)</span>
+            <Select
+              value={user?.role?.slug || 'org_admin'}
+              onValueChange={(value) => setUserRole(value)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="god_admin">God Admin</SelectItem>
+                <SelectItem value="org_admin">Org Admin</SelectItem>
+                <SelectItem value="agent">Agent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -76,11 +111,31 @@ export default function Dashboard() {
   // Org Admin / Agent Dashboard
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Welcome back, {user.name}. Here's an overview of your workspace.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Welcome back, {getUserDisplayName()}. Here's an overview of your workspace.
+          </p>
+        </div>
+        
+        {/* Role Switcher for Testing */}
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-xs text-muted-foreground">Test Role (Dev Mode)</span>
+          <Select
+            value={user?.role?.slug || 'org_admin'}
+            onValueChange={(value) => setUserRole(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="god_admin">God Admin</SelectItem>
+              <SelectItem value="org_admin">Org Admin</SelectItem>
+              <SelectItem value="agent">Agent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

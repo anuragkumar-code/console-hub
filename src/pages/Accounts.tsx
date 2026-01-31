@@ -6,9 +6,11 @@ import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
 import { accounts } from '@/data/mockData';
 import { Briefcase, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function Accounts() {
   const [searchQuery, setSearchQuery] = useState('');
+  const { canCreate, canUpdate, canDelete } = usePermission();
 
   const filteredAccounts = accounts.filter(account =>
     account.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -24,15 +26,32 @@ export default function Accounts() {
     }).format(value);
   };
 
+  // Build actions array based on permissions
+  const getAccountActions = (accountId: string) => {
+    const actions: Array<{ label: string; onClick: () => void; destructive?: boolean }> = [
+      { label: 'View Details', onClick: () => console.log('View', accountId) },
+    ];
+
+    if (canUpdate('accounts')) {
+      actions.push({ label: 'Edit', onClick: () => console.log('Edit', accountId) });
+    }
+
+    if (canDelete('accounts')) {
+      actions.push({ label: 'Delete', onClick: () => console.log('Delete', accountId), destructive: true });
+    }
+
+    return actions;
+  };
+
   return (
     <div>
       <PageHeader
         title="Accounts"
         description="Manage company accounts and relationships"
-        action={{
+        action={canCreate('accounts') ? {
           label: 'Add Account',
           onClick: () => console.log('Add account'),
-        }}
+        } : undefined}
       >
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -64,11 +83,7 @@ export default function Accounts() {
                 { label: 'Owner', value: account.owner },
               ]}
               onClick={() => console.log('View account', account.id)}
-              actions={[
-                { label: 'View Details', onClick: () => console.log('View', account.id) },
-                { label: 'Edit', onClick: () => console.log('Edit', account.id) },
-                { label: 'Delete', onClick: () => console.log('Delete', account.id), destructive: true },
-              ]}
+              actions={getAccountActions(account.id)}
             />
           ))}
         </CardGrid>

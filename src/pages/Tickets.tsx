@@ -6,9 +6,11 @@ import { tickets } from '@/data/mockData';
 import { Ticket as TicketType } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Search, AlertTriangle } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function Tickets() {
   const [searchQuery, setSearchQuery] = useState('');
+  const { canCreate } = usePermission();
 
   const filteredTickets = tickets.filter(ticket =>
     ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,10 +89,10 @@ export default function Tickets() {
       <PageHeader
         title="Tickets"
         description="Manage support tickets and requests"
-        action={{
+        action={canCreate('tickets') ? {
           label: 'Create Ticket',
           onClick: () => console.log('Create ticket'),
-        }}
+        } : undefined}
       >
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

@@ -2,65 +2,58 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/hooks/use-sidebar';
-import type { UserRole } from '@/types';
+import { navItems, type NavItemConfig } from '@/config/permissions';
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  Shield,
-  KeyRound,
-  MessageSquare,
-  Contact,
-  Briefcase,
-  HandshakeIcon,
-  Ticket,
-  Inbox,
-  UsersRound,
-  Settings,
-  User,
-  FileText,
   ChevronLeft,
   ChevronRight,
   X,
 } from 'lucide-react';
 
-interface NavItemConfig {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  path: string;
-  roles: UserRole[];
-}
-
-const navItems: NavItemConfig[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['god_admin', 'org_admin', 'agent'] },
-  { label: 'Organizations', icon: Building2, path: '/organizations', roles: ['god_admin'] },
-  { label: 'Users', icon: Users, path: '/users', roles: ['god_admin'] },
-  { label: 'Roles', icon: Shield, path: '/roles', roles: ['god_admin'] },
-  { label: 'Permissions', icon: KeyRound, path: '/permissions', roles: ['god_admin'] },
-  { label: 'Contacts', icon: Contact, path: '/contacts', roles: ['org_admin', 'agent'] },
-  { label: 'Accounts', icon: Briefcase, path: '/accounts', roles: ['org_admin', 'agent'] },
-  { label: 'Deals', icon: HandshakeIcon, path: '/deals', roles: ['org_admin', 'agent'] },
-  { label: 'Tickets', icon: Ticket, path: '/tickets', roles: ['org_admin', 'agent'] },
-  { label: 'Inbox', icon: Inbox, path: '/inbox', roles: ['org_admin', 'agent'] },
-  { label: 'Channels', icon: MessageSquare, path: '/channels', roles: ['god_admin', 'org_admin'] },
-  { label: 'Teams', icon: UsersRound, path: '/teams', roles: ['org_admin'] },
-  { label: 'Audit Logs', icon: FileText, path: '/audit-logs', roles: ['god_admin'] },
-  { label: 'Settings', icon: Settings, path: '/settings', roles: ['org_admin'] },
-  { label: 'Profile', icon: User, path: '/profile', roles: ['god_admin', 'org_admin', 'agent'] },
-];
-
 export function AppSidebar() {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, isGodAdmin } = useAuth();
   const { collapsed, toggleCollapsed, isMobileOpen, setMobileOpen, isMobile } = useSidebar();
   const location = useLocation();
 
-  const filteredNavItems = navItems.filter(item => hasPermission(item.roles));
+  /**
+   * Filter navigation items based on user permissions
+   */
+  const filteredNavItems = navItems.filter((item: NavItemConfig) => {
+    // Always show items marked as alwaysVisible
+    if (item.alwaysVisible) return true;
+    
+    // God admin can see everything
+    if (isGodAdmin) return true;
+    
+    // God admin only items are hidden for non-god admins
+    if (item.godAdminOnly) return false;
+    
+    // Check permission if specified
+    if (item.permission) {
+      return hasPermission(item.permission.resource, item.permission.action);
+    }
+    
+    // Items without permission requirement are visible
+    return true;
+  });
 
   // Close mobile sidebar when route changes
   const handleNavClick = () => {
     if (isMobile) {
       setMobileOpen(false);
     }
+  };
+
+  // Get display name for the user
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.email || 'User';
+  };
+
+  // Get role display name
+  const getRoleDisplayName = () => {
+    return user?.role?.name || 'Unknown Role';
   };
 
   return (
@@ -139,13 +132,19 @@ export function AppSidebar() {
           })}
         </nav>
 
-        {/* Role indicator (for demo) */}
+        {/* User info */}
         {(!collapsed || isMobile) && (
           <div className="border-t border-sidebar-border p-3">
             <div className="rounded-md bg-sidebar-accent px-3 py-2">
               <p className="text-xs text-muted-foreground">Logged in as</p>
-              <p className="text-sm font-medium text-sidebar-accent-foreground">
-                {user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              <p className="text-sm font-medium text-sidebar-accent-foreground truncate">
+                {getUserDisplayName()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {getRoleDisplayName()}
+                {isGodAdmin && (
+                  <span className="ml-1 text-primary">(Super Admin)</span>
+                )}
               </p>
             </div>
           </div>

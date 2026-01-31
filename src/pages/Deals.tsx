@@ -3,8 +3,11 @@ import { DataTable, Column } from '@/components/ui/data-table';
 import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
 import { deals } from '@/data/mockData';
 import { Deal } from '@/types';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function Deals() {
+  const { canCreate } = usePermission();
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -75,10 +78,10 @@ export default function Deals() {
       <PageHeader
         title="Deals"
         description="Manage your sales pipeline"
-        action={{
+        action={canCreate('deals') ? {
           label: 'Create Deal',
           onClick: () => console.log('Create deal'),
-        }}
+        } : undefined}
       />
 
       <div className="p-6">
