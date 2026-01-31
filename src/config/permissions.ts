@@ -14,6 +14,8 @@ import {
   Settings,
   User,
   FileText,
+  Key,
+  Webhook,
 } from 'lucide-react';
 import type { PermissionAction } from '@/types';
 
@@ -60,6 +62,8 @@ export const routePermissions: Record<string, RoutePermission> = {
   
   // Settings
   '/settings': { resource: 'settings', action: 'read' },
+  '/settings/api-keys': { resource: 'settings', action: 'read' },
+  '/settings/webhooks': { resource: 'settings', action: 'read' },
 };
 
 // Routes that are always accessible to authenticated users
@@ -186,6 +190,18 @@ export const navItems: NavItemConfig[] = [
     label: 'Settings', 
     icon: Settings, 
     path: '/settings',
+    permission: { resource: 'settings', action: 'read' },
+  },
+  { 
+    label: 'API Keys', 
+    icon: Key, 
+    path: '/settings/api-keys',
+    permission: { resource: 'settings', action: 'read' },
+  },
+  { 
+    label: 'Webhooks', 
+    icon: Webhook, 
+    path: '/settings/webhooks',
     permission: { resource: 'settings', action: 'read' },
   },
   

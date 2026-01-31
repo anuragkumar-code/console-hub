@@ -29,6 +29,8 @@ import Channels from "@/pages/Channels";
 import Teams from "@/pages/Teams";
 import AuditLogs from "@/pages/AuditLogs";
 import Settings from "@/pages/Settings";
+import ApiKeys from "@/pages/ApiKeys";
+import Webhooks from "@/pages/Webhooks";
 import Profile from "@/pages/Profile";
 import Forbidden from "@/pages/Forbidden";
 import NotFound from "@/pages/NotFound";
@@ -142,6 +144,16 @@ const App = () => (
                     <Route path="/settings" element={
                       <ProtectedRoute resource="settings">
                         <Settings />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/settings/api-keys" element={
+                      <ProtectedRoute resource="settings">
+                        <ApiKeys />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/settings/webhooks" element={
+                      <ProtectedRoute resource="settings">
+                        <Webhooks />
                       </ProtectedRoute>
                     } />
 

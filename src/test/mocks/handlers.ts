@@ -458,4 +458,87 @@ export const handlers = [
       },
     });
   }),
+
+  // API Keys endpoints
+  http.get(`${API_BASE_URL}/settings/api-keys`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          id: 'key-1',
+          name: 'Production API Key',
+          key_prefix: 'sk_prod_abc',
+          created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
+          last_used_at: new Date(Date.now() - 3600000).toISOString(),
+        },
+        {
+          id: 'key-2',
+          name: 'Development API Key',
+          key_prefix: 'sk_dev_xyz',
+          created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+        },
+      ],
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/settings/api-keys`, async ({ request }) => {
+    const body = await request.json() as { name: string };
+    return HttpResponse.json({
+      success: true,
+      data: {
+        id: `key-${Date.now()}`,
+        name: body.name,
+        key: 'sk_live_' + Math.random().toString(36).substring(2, 38),
+        key_prefix: 'sk_live_' + Math.random().toString(36).substring(2, 10),
+        created_at: new Date().toISOString(),
+      },
+    }, { status: 201 });
+  }),
+
+  http.delete(`${API_BASE_URL}/settings/api-keys/:id`, () => {
+    return HttpResponse.json({ success: true, message: 'API key deleted' });
+  }),
+
+  // Webhooks endpoints
+  http.get(`${API_BASE_URL}/settings/webhooks`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          id: 'webhook-1',
+          url: 'https://example.com/webhook',
+          events: ['contact.created', 'contact.updated', 'deal.won'],
+          is_active: true,
+        },
+        {
+          id: 'webhook-2',
+          url: 'https://api.slack.com/webhook/123',
+          events: ['ticket.created', 'ticket.resolved'],
+          is_active: false,
+        },
+      ],
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/settings/webhooks`, async ({ request }) => {
+    const body = await request.json() as { url: string; events: string[] };
+    return HttpResponse.json({
+      success: true,
+      data: {
+        id: `webhook-${Date.now()}`,
+        secret: 'whsec_' + Math.random().toString(36).substring(2, 34),
+      },
+    }, { status: 201 });
+  }),
+
+  http.delete(`${API_BASE_URL}/settings/webhooks/:id`, () => {
+    return HttpResponse.json({ success: true, message: 'Webhook deleted' });
+  }),
+
+  http.post(`${API_BASE_URL}/settings/webhooks/:id/test`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: { success: true, message: 'Webhook test successful' },
+    });
+  }),
 ];
