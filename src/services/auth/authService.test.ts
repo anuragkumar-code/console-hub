@@ -11,7 +11,7 @@ describe('authService', () => {
   describe('login', () => {
     it('should successfully login with valid credentials', async () => {
       const result = await authService.login({
-        email: 'admin@acme.com',
+        identifier: 'admin@acme.com',
         password: 'password123',
       });
 
@@ -27,7 +27,7 @@ describe('authService', () => {
     it('should throw error with invalid credentials', async () => {
       await expect(
         authService.login({
-          email: 'wrong@email.com',
+          identifier: 'wrong@email.com',
           password: 'wrongpassword',
         })
       ).rejects.toThrow();

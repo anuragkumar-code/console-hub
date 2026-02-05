@@ -114,14 +114,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [hasPermission, isGodAdmin]);
 
   /**
-   * Login with email and password
+   * Login with email/identifier and password
    */
   const login = useCallback(async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const loggedInUser = await authService.login({ email, password });
+      // Backend expects 'identifier' field (can be email or username)
+      const loggedInUser = await authService.login({ identifier: email, password });
       setUser(loggedInUser);
     } catch (err) {
       const errorMessage = apiHelpers.getErrorMessage(err);

@@ -44,9 +44,10 @@ export interface ApiUser {
 
 /**
  * Login request payload
+ * Note: Backend expects 'identifier' (can be email or username)
  */
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 

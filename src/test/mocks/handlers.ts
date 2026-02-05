@@ -97,9 +97,9 @@ export const mockDashboardStats = {
 export const handlers = [
   // Auth endpoints
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
-    const body = await request.json() as { email: string; password: string };
+    const body = await request.json() as { identifier: string; password: string };
     
-    if (body.email === 'admin@acme.com' && body.password === 'password123') {
+    if (body.identifier === 'admin@acme.com' && body.password === 'password123') {
       return HttpResponse.json({
         success: true,
         data: {
